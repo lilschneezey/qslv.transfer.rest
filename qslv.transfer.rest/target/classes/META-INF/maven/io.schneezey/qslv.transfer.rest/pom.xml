@@ -8,7 +8,7 @@
 		<version>2.2.2.RELEASE</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.bac</groupId>
+	<groupId>io.schneezey</groupId>
 	<artifactId>qslv.transfer.rest</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Transfer.Rest</name>
@@ -67,12 +67,12 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>com.bac</groupId>
+			<groupId>io.schneezey</groupId>
 			<artifactId>qslv.interface</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>com.bac</groupId>
+			<groupId>io.schneezey</groupId>
 			<artifactId>qslv.common</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
@@ -85,7 +85,7 @@
 			<artifactId>spring-kafka</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.bac</groupId>
+			<groupId>io.schneezey</groupId>
 			<artifactId>qslv.common.kafka</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 			<exclusions>
