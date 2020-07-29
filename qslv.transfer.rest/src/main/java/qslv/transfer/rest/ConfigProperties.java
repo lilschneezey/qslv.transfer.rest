@@ -2,13 +2,11 @@ package qslv.transfer.rest;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 
 import qslv.util.EnableQuickSilver;
 
 @Configuration
 @ConfigurationProperties(prefix = "qslv")
-@PropertySource("classpath:application.properties")
 @EnableQuickSilver
 public class ConfigProperties {
 

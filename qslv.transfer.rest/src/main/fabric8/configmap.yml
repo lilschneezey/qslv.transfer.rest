@@ -1,0 +1,23 @@
+metadata:
+  name: bs-${project.artifactId}
+data:
+  application.properties: |
+    logging.level.qslv=DEBUG
+    spring.jpa.hibernate.ddl-auto=update
+    spring.datasource.url=jdbc:postgresql://local-cockroach-db.qslv-transaction-rest.svc:26257/deposits?sslmode=disable
+    spring.datasource.username=root
+    qslv.aitid=12345
+    qslv.reservation-url=http://localhost:9091/reservation
+    qslv.cancel-reservation-url=http://localhost:9091/cancelReservation
+    qslv.rest-connect-timeout=500
+    qslv.rest-connection-request-timeout=500
+    qslv.rest-attempts=3
+    qslv.rest-backoff-delay=100
+    qslv.rest-backoff-delay-max=500
+    qslv.rest-timeout=500
+    qslv.kafka-transfer-request-queue=online.transfer.requests
+    qslv.kafka-properties=/deployments/config/kafka-producer/kafka.properties
+    qslv.kafka-timeout=1000
+    management.endpoint.health.show-details=always
+    management.endpoint.health.show-components=always
+  
