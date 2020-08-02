@@ -1,11 +1,11 @@
   kind: "Service"
   apiVersion: "v1"
   metadata:
-    name: "qslv-schema-registry"
+    name: "schema-registry"
   spec:
     ports:
       -
-        name: "schema"
+        name: "schema-registry"
         protocol: "TCP"
         port: 8081
         targetPort: 8081

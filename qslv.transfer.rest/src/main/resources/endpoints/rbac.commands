@@ -1,0 +1,1 @@
+oc create rolebinding default-view --clusterrole=view   --serviceaccount=quick-silver:default --namespace=quick-silver

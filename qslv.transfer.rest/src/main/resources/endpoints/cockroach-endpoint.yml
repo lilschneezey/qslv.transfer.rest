@@ -1,7 +1,7 @@
   kind: "Endpoints"
   apiVersion: "v1"
   metadata:
-    name: "kafka-broker" 
+    name: "cockroach" 
   subsets: 
     -
       addresses:
@@ -9,5 +9,5 @@
           ip: "192.168.1.77" 
       ports:
         -
-          port: 9092 
-          name: "kafka-broker"
+          port: 26257 
+          name: "cockroach"
