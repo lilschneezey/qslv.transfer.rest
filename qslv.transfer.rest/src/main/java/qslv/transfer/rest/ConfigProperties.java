@@ -12,7 +12,6 @@ public class ConfigProperties {
 
 	private String aitid = "27834";
 	private String reservationUrl;
-	private String cancelReservationUrl;
 	private int restConnectionRequestTimeout = 1000;
 	private int restConnectTimeout = 1000;
 	private int restTimeout = 1000;
@@ -37,14 +36,6 @@ public class ConfigProperties {
 
 	public void setReservationUrl(String reservationUrl) {
 		this.reservationUrl = reservationUrl;
-	}
-
-	public String getCancelReservationUrl() {
-		return cancelReservationUrl;
-	}
-
-	public void setCancelReservationUrl(String cancelReservationUrl) {
-		this.cancelReservationUrl = cancelReservationUrl;
 	}
 
 	public int getRestConnectionRequestTimeout() {

@@ -15,7 +15,10 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.SimpleCommandLinePropertySource;
 
+import qslv.util.EnableQuickSilver;
+
 @SpringBootApplication
+@EnableQuickSilver
 @ComponentScan(basePackages = {"qslv.transfer.rest", "qslv.util"})
 public class TransferApplication {
 	private static final Logger log = LoggerFactory.getLogger(TransferApplication.class);
@@ -28,6 +31,7 @@ public class TransferApplication {
 	    	
 	    	application.setAdditionalProfiles("local");
 	    }
+        application.run(args);
 	}
 
 	@Autowired

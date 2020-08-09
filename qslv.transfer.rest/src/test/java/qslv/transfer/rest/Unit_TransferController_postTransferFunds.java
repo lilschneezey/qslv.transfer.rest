@@ -6,7 +6,6 @@ import static org.mockito.Mockito.*;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -72,7 +71,7 @@ class Unit_TransferController_postTransferFunds {
 		trans.setTransactionAmount(-2323L);
 		trans.setTransactionMetaDataJson("{etc, etc}");
 		trans.setTransactionTypeCode(TransactionResource.RESERVATION);
-		setupResponse.setReservations(Collections.singletonList(trans));
+		setupResponse.setReservation(trans);
 
 		when(transferService.transferFunds(any(), any())).thenReturn(setupResponse);
 		
@@ -119,7 +118,7 @@ class Unit_TransferController_postTransferFunds {
 	}
 	
 	@Test
-	void test_postTransferFunds_kafkaFailes() {
+	void test_postTransferFunds_kafkaFails() {
 		//-- Prepare ------------------
 		HashMap<String, String> headers = new HashMap<String, String>();
 		headers.put(TraceableRequest.AIT_ID, "12345");
@@ -149,7 +148,7 @@ class Unit_TransferController_postTransferFunds {
 		trans.setTransactionAmount(-2323L);
 		trans.setTransactionMetaDataJson("{etc, etc}");
 		trans.setTransactionTypeCode(TransactionResource.RESERVATION);
-		setupResponse.setReservations(Collections.singletonList(trans));
+		setupResponse.setReservation(trans);
 
 		DisruptedProcessingException tfpe = new DisruptedProcessingException(setupResponse, HttpStatus.INTERNAL_SERVER_ERROR, "msg");
 		
