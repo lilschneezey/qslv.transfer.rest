@@ -61,10 +61,8 @@ import qslv.common.TimedResponse;
 import qslv.common.TraceableRequest;
 import qslv.common.kafka.TraceableMessage;
 import qslv.data.Account;
-import qslv.transaction.request.CancelReservationRequest;
 import qslv.transaction.request.ReservationRequest;
 import qslv.transaction.resource.TransactionResource;
-import qslv.transaction.response.CancelReservationResponse;
 import qslv.transaction.response.ReservationResponse;
 import qslv.transfer.request.TransferFulfillmentMessage;
 import qslv.transfer.request.TransferFundsRequest;
@@ -131,9 +129,9 @@ class Unit_MvcTransferApplication_transferFunds {
 		
 		TransferFundsResponse tfr = response.getPayload();
 		assertEquals(tfr.getStatus(), TransferFundsResponse.SUCCESS);
-		assertEquals(1, tfr.getReservations().size());
+		assertNotNull( tfr.getReservation() );
 		
-		TransactionResource reservation = tfr.getReservations().get(0);
+		TransactionResource reservation = tfr.getReservation();
 		assertEquals(reservationResource.getAccountNumber(), reservation.getAccountNumber());
 		assertNull(reservation.getDebitCardNumber());
 		assertEquals(request.getRequestUuid(), reservation.getRequestUuid());
@@ -252,9 +250,6 @@ class Unit_MvcTransferApplication_transferFunds {
 		when(kafkaTemplate.send(anyString(), anyString(), ArgumentMatchers.<TraceableMessage<TransferFulfillmentMessage>>any()))
 			.thenReturn(future);
 		
-		setup_cancellation();
-		prepare_cancellation();
-		
 		execute_post(status().isInternalServerError());
 		extract_response();
 		
@@ -267,53 +262,7 @@ class Unit_MvcTransferApplication_transferFunds {
 		assertEquals(tfr.getStatus(), TransferFundsResponse.FAILURE);
 
 		assertNull(tfr.getFulfillmentMessage());
-		assertEquals(2, tfr.getReservations().size());
-
-		TransactionResource cancellation = tfr.getReservations().get(1);
-		assertEquals(reservationResource.getAccountNumber(), cancellation.getAccountNumber());
-		assertNull(cancellation.getDebitCardNumber());
-		assertEquals(request.getRequestUuid(), cancellation.getRequestUuid());
-		assertEquals(cancelResource.getRunningBalanceAmount(), cancellation.getRunningBalanceAmount());
-		assertEquals(cancelResource.getTransactionAmount(), cancellation.getTransactionAmount());
-		assertEquals(request.getTransactionJsonMetaData(), cancellation.getTransactionMetaDataJson());
-		assertEquals(TransactionResource.RESERVATION_CANCEL, cancellation.getTransactionTypeCode());
-
-	}
-	
-	@Test void test_transferFunds_kafkaAndCancellationFails() throws Exception {
-		setup_request();
-		setup_fromAcct();
-		setup_toAcct();
-		prepare_jdbcTemplate();
-		setup_reservation();
-		prepare_restTemplate();
-		
-		when( future.get(anyLong(), any(TimeUnit.class) ) ).thenThrow(new InterruptedException());
-		when(kafkaTemplate.send(anyString(), anyString(), ArgumentMatchers.<TraceableMessage<TransferFulfillmentMessage>>any()))
-			.thenReturn(future);
-		when(restTemplate.exchange(eq(config.getCancelReservationUrl()), eq(HttpMethod.POST), 
-				ArgumentMatchers.<HttpEntity<CancelReservationRequest>>any(), 
-				ArgumentMatchers.<ParameterizedTypeReference<TimedResponse<CancelReservationResponse>>>any()))
-			.thenThrow(new ResourceAccessException("message", new SocketTimeoutException("Mock SocketTimeoutException")) )
-			.thenThrow(new ResourceAccessException("message", new SocketTimeoutException("Mock SocketTimeoutException")) )
-			.thenThrow(new ResourceAccessException("message", new SocketTimeoutException("Mock SocketTimeoutException")) );
-		
-		execute_post(status().isInternalServerError());
-		extract_response();
-		
-		verify(jdbcTemplate, times(2)).query( eq(JdbcDao.getAccount_sql), ArgumentMatchers.<RowMapper<Account>>any(), anyString() );
-		verify(restTemplate).exchange(eq(config.getReservationUrl()), eq(HttpMethod.POST), 
-				ArgumentMatchers.<HttpEntity<ReservationRequest>>any(), 
-				ArgumentMatchers.<ParameterizedTypeReference<TimedResponse<ReservationResponse>>>any());
-		verify(restTemplate, times(3)).exchange(eq(config.getCancelReservationUrl()), eq(HttpMethod.POST), 
-				ArgumentMatchers.<HttpEntity<CancelReservationRequest>>any(), 
-				ArgumentMatchers.<ParameterizedTypeReference<TimedResponse<CancelReservationResponse>>>any());
-
-		TransferFundsResponse tfr = response.getPayload();
-		assertEquals(tfr.getStatus(), TransferFundsResponse.FAILURE);
-
-		assertNull(tfr.getFulfillmentMessage());
-		assertEquals(1, tfr.getReservations().size());
+		assertNotNull(tfr.getReservation());
 	}
 	
 	//--Setups()---and----Prepares()---------------
@@ -399,35 +348,6 @@ class Unit_MvcTransferApplication_transferFunds {
 		when( future.get(anyLong(), any(TimeUnit.class) ) ).thenReturn(sendResult);
 		when(kafkaTemplate.send(anyString(), anyString(), ArgumentMatchers.<TraceableMessage<TransferFulfillmentMessage>>any()))
 			.thenReturn(future);
-	}
-	
-	TransactionResource cancelResource = new TransactionResource();
-	CancelReservationResponse cancelResponse = new CancelReservationResponse();
-	void setup_cancellation() {
-		cancelResource.setAccountNumber(request.getFromAccountNumber());
-		cancelResource.setDebitCardNumber(null);
-		cancelResource.setInsertTimestamp(Timestamp.from(Instant.now()));
-		cancelResource.setRequestUuid(request.getRequestUuid());
-		cancelResource.setTransactionUuid(UUID.randomUUID());
-		cancelResource.setReservationUuid(null);
-		cancelResource.setRunningBalanceAmount(273848L);
-		cancelResource.setTransactionAmount(request.getTransactionAmount());
-		cancelResource.setTransactionMetaDataJson(request.getTransactionJsonMetaData());
-		cancelResource.setTransactionTypeCode(TransactionResource.RESERVATION_CANCEL);
-		
-		cancelResponse.setResource(cancelResource);
-		cancelResponse.setStatus(CancelReservationResponse.SUCCESS);
-	}
-	
-	void prepare_cancellation() {
-		ResponseEntity<TimedResponse<CancelReservationResponse>> restResponse = 
-				new ResponseEntity<TimedResponse<CancelReservationResponse>>(new TimedResponse<>(123456L, cancelResponse), HttpStatus.OK);
-			
-			when(restTemplate.exchange(eq(config.getCancelReservationUrl()), eq(HttpMethod.POST), 
-					ArgumentMatchers.<HttpEntity<CancelReservationRequest>>any(), 
-					ArgumentMatchers.<ParameterizedTypeReference<TimedResponse<CancelReservationResponse>>>any()))
-				.thenReturn(restResponse);
-			
 	}
 	
 	String postResult;

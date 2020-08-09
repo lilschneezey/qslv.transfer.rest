@@ -19,10 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import qslv.data.Account;
-import qslv.transaction.request.CancelReservationRequest;
 import qslv.transaction.request.ReservationRequest;
 import qslv.transaction.resource.TransactionResource;
-import qslv.transaction.response.CancelReservationResponse;
 import qslv.transaction.response.ReservationResponse;
 import qslv.transfer.request.TransferFulfillmentMessage;
 import qslv.transfer.request.TransferFundsRequest;
@@ -98,7 +96,7 @@ class Unit_TransferService_transferFunds {
 		assertEquals(request.getTransactionJsonMetaData(),trCaptor.getValue().getTransactionMetaDataJson());
 
 		assertEquals(TransferFundsResponse.SUCCESS, response.getStatus());
-		assertEquals(request.getFromAccountNumber(), response.getReservations().get(0).getAccountNumber());
+		assertEquals(request.getFromAccountNumber(), response.getReservation().getAccountNumber());
 		assertEquals(request.getFromAccountNumber(), response.getFulfillmentMessage().getFromAccountNumber());
 		assertEquals(request.getToAccountNumber(), response.getFulfillmentMessage().getToAccountNumber());
 		assertEquals(request.getTransactionAmount(), response.getFulfillmentMessage().getTransactionAmount());
@@ -106,6 +104,8 @@ class Unit_TransferService_transferFunds {
 				response.getFulfillmentMessage().getTransactionMetaDataJson());
 		assertEquals(setupResponse.getResource().getTransactionUuid(),
 				response.getFulfillmentMessage().getReservationUuid());
+		assertEquals(setupResponse.getResource().getTransactionUuid(),
+				response.getFulfillmentMessage().getRequestUuid());
 
 	}
 
@@ -206,7 +206,7 @@ class Unit_TransferService_transferFunds {
 		verify(reservationDao).recordReservation(any(), any(ReservationRequest.class));
 
 		assertEquals(TransferFundsResponse.INSUFFICIENT_FUNDS, response.getStatus());
-		assertEquals(request.getFromAccountNumber(), response.getReservations().get(0).getAccountNumber());
+		assertEquals(request.getFromAccountNumber(), response.getReservation().getAccountNumber());
 	}
 
 	@Test
@@ -281,20 +281,6 @@ class Unit_TransferService_transferFunds {
 		doThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "test msg"))
 			.when(kafkaDao).produceTransferMessage(any(), any(TransferFulfillmentMessage.class));
 
-		// --------------
-		CancelReservationResponse cancelResponse = new CancelReservationResponse(CancelReservationResponse.SUCCESS, new TransactionResource());
-		cancelResponse.getResource().setTransactionUuid(UUID.randomUUID());
-		cancelResponse.getResource().setAccountNumber(request.getFromAccountNumber());
-		cancelResponse.getResource().setDebitCardNumber(null);
-		cancelResponse.getResource().setInsertTimestamp(new Timestamp(Instant.now().toEpochMilli()));
-		cancelResponse.getResource().setReservationUuid(setupResponse.getResource().getReservationUuid());
-		cancelResponse.getResource().setRequestUuid(UUID.randomUUID());
-		cancelResponse.getResource().setRunningBalanceAmount(99999L);
-		cancelResponse.getResource().setTransactionAmount(request.getTransactionAmount());
-		cancelResponse.getResource().setTransactionMetaDataJson(request.getTransactionJsonMetaData());
-		cancelResponse.getResource().setTransactionTypeCode(TransactionResource.RESERVATION_CANCEL);
-		when(reservationDao.cancelReservation(any(), any(CancelReservationRequest.class))).thenReturn(cancelResponse);
-		
 		// ---------------
 		DisruptedProcessingException ex = assertThrows(DisruptedProcessingException.class, () -> {
 			service.transferFunds(headers, request);
@@ -302,15 +288,11 @@ class Unit_TransferService_transferFunds {
 		verify(kafkaDao).produceTransferMessage(any(), any(TransferFulfillmentMessage.class));
 		verify(jdbcDao, times(2)).getAccount(anyString());
 		verify(reservationDao).recordReservation(any(), any(ReservationRequest.class));
-		verify(reservationDao).cancelReservation(any(), any(CancelReservationRequest.class));
 
 		assertTrue( ex.getCause() instanceof ResponseStatusException);
 		assertEquals(TransferFundsResponse.FAILURE, ex.getResponse().getStatus());
-		assertEquals( 2, ex.getResponse().getReservations().size());
-		assertEquals(request.getFromAccountNumber(), ex.getResponse().getReservations().get(0).getAccountNumber());
-		assertEquals(TransactionResource.RESERVATION, ex.getResponse().getReservations().get(0).getTransactionTypeCode());
-		assertEquals(request.getFromAccountNumber(), ex.getResponse().getReservations().get(1).getAccountNumber());
-		assertEquals(TransactionResource.RESERVATION_CANCEL, ex.getResponse().getReservations().get(1).getTransactionTypeCode());
+		assertEquals(request.getFromAccountNumber(), ex.getResponse().getReservation().getAccountNumber());
+		assertEquals(TransactionResource.RESERVATION, ex.getResponse().getReservation().getTransactionTypeCode());
 		assertNull(ex.getResponse().getFulfillmentMessage());
 
 	}
@@ -354,10 +336,6 @@ class Unit_TransferService_transferFunds {
 		doThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "test msg"))
 			.when(kafkaDao).produceTransferMessage(any(), any(TransferFulfillmentMessage.class));
 
-		// --------------
-		when(reservationDao.cancelReservation(any(), any(CancelReservationRequest.class)))
-			.thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "test msg"));
-		
 		// ---------------
 		DisruptedProcessingException ex = assertThrows(DisruptedProcessingException.class, () -> {
 			service.transferFunds(headers, request);
@@ -365,13 +343,11 @@ class Unit_TransferService_transferFunds {
 		verify(kafkaDao).produceTransferMessage(any(), any(TransferFulfillmentMessage.class));
 		verify(jdbcDao, times(2)).getAccount(anyString());
 		verify(reservationDao).recordReservation(any(), any(ReservationRequest.class));
-		verify(reservationDao).cancelReservation(any(), any(CancelReservationRequest.class));
 
 		assertTrue( ex.getCause() instanceof ResponseStatusException);
 		assertEquals(TransferFundsResponse.FAILURE, ex.getResponse().getStatus());
-		assertEquals( 1, ex.getResponse().getReservations().size());
-		assertEquals(request.getFromAccountNumber(), ex.getResponse().getReservations().get(0).getAccountNumber());
-		assertEquals(TransactionResource.RESERVATION, ex.getResponse().getReservations().get(0).getTransactionTypeCode());
+		assertEquals(request.getFromAccountNumber(), ex.getResponse().getReservation().getAccountNumber());
+		assertEquals(TransactionResource.RESERVATION, ex.getResponse().getReservation().getTransactionTypeCode());
 		assertNull(ex.getResponse().getFulfillmentMessage());
 
 	}

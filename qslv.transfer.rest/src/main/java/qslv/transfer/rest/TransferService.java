@@ -1,17 +1,12 @@
 package qslv.transfer.rest;
 import qslv.data.Account;
-import qslv.transaction.request.CancelReservationRequest;
 import qslv.transaction.request.ReservationRequest;
-import qslv.transaction.resource.TransactionResource;
-import qslv.transaction.response.CancelReservationResponse;
 import qslv.transaction.response.ReservationResponse;
 import qslv.transfer.request.TransferFulfillmentMessage;
 import qslv.transfer.request.TransferFundsRequest;
 import qslv.transfer.response.TransferFundsResponse;
 
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +53,7 @@ public class TransferService {
 	}
 
 	public TransferFundsResponse transferFunds(Map<String, String> callingHeaders, TransferFundsRequest request) {
-		log.debug("service.transferFunds ENTRY");
+		log.trace("service.transferFunds ENTRY");
 		
 		Account fromAccount = jdbcDao.getAccount(request.getFromAccountNumber());
 		if (false == accountInGoodStanding(fromAccount)) {
@@ -80,25 +75,26 @@ public class TransferService {
 		treq.setRequestUuid(request.getRequestUuid());
 		treq.setTransactionAmount(0L - request.getTransactionAmount());
 		treq.setTransactionMetaDataJson(request.getTransactionJsonMetaData());
+		treq.setAuthorizeAgainstBalance(true);
+		treq.setProtectAgainstOverdraft(false);
 		
 		// Reserve Money in From Account---------------
 		ReservationResponse tresp = reservationDao.recordReservation(callingHeaders, treq);
 		
 		// ---------------
 		TransferFundsResponse response = new TransferFundsResponse();
-		response.setReservations(new ArrayList<TransactionResource>());
-		response.getReservations().add(tresp.getResource());
-		response.setStatus(tresp.getStatus());
+		response.setReservation(tresp.getResource());
 		
 		// ---------------
 		if (tresp.getStatus() == ReservationResponse.INSUFFICIENT_FUNDS) {
+			response.setStatus(TransferFundsResponse.INSUFFICIENT_FUNDS);
 			response.setFulfillmentMessage(null);
 		} else {
 			TransferFulfillmentMessage tfr = new TransferFulfillmentMessage();
+			tfr.setRequestUuid(tresp.getResource().getTransactionUuid()); // <-- critical to downstream idempotency
+			tfr.setReservationUuid(tresp.getResource().getTransactionUuid());
 			tfr.setFromAccountNumber(fromAccount.getAccountNumber());
 			tfr.setToAccountNumber(toAccount.getAccountNumber());
-			tfr.setRequestUuid(UUID.randomUUID());
-			tfr.setReservationUuid(tresp.getResource().getTransactionUuid());
 			tfr.setTransactionAmount(request.getTransactionAmount());
 			tfr.setTransactionMetaDataJson(request.getTransactionJsonMetaData());
 			tfr.setVersion(TransferFulfillmentMessage.version1_0);
@@ -106,31 +102,21 @@ public class TransferService {
 			try {
 				kafkaDao.produceTransferMessage(callingHeaders, tfr);
 				response.setFulfillmentMessage(tfr);
+				response.setStatus(TransferFundsResponse.SUCCESS);
 			} catch (ResponseStatusException ex) {
-				log.trace("Kafka message production failed. Attempting to cancel reservation.");
+				log.debug("Kafka message production failed.");
 				response.setStatus(TransferFundsResponse.FAILURE);
-				
-				CancelReservationRequest cancellation = new CancelReservationRequest();
-				cancellation.setRequestUuid(UUID.randomUUID());
-				cancellation.setReservationUuid(tresp.getResource().getTransactionUuid());
-				cancellation.setTransactionMetaDataJson(request.getTransactionJsonMetaData());
-				try {
-					CancelReservationResponse cresp = reservationDao.cancelReservation(callingHeaders, cancellation);
-					response.getReservations().add(cresp.getResource());
-				} catch (ResponseStatusException cancelException) {
-					log.error("Could not cancel reservation {}", tresp.getResource().getTransactionUuid());
-					log.error(cancelException.getLocalizedMessage());
-				}
-				throw new DisruptedProcessingException(response, ex.getStatus(), "Kakfa producer Timed Out", ex);
+				throw new DisruptedProcessingException(response, ex.getStatus(), "Kafka message production failed. "
+						+ "Try the same request in another cluster.", ex);
 			}
 		}
 	
-		log.debug("service.transferFunds EXIT");
+		log.trace("service.transferFunds EXIT");
 		return response;
 	}
 
 	private boolean accountInGoodStanding(Account account) {
-		return (account.getAccountLifeCycleStatus() == "EF");
+		return (account.getAccountLifeCycleStatus().equals("EF"));
 	}
 
 }

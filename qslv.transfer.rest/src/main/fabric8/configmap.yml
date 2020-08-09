@@ -4,11 +4,10 @@ data:
   application.properties: |
     logging.level.qslv=DEBUG
     spring.jpa.hibernate.ddl-auto=update
-    spring.datasource.url=jdbc:postgresql://local-cockroach-db.qslv-transaction-rest.svc:26257/deposits?sslmode=disable
+    spring.datasource.url=jdbc:postgresql://cockroach.quick-silver.svc:26257/deposits?sslmode=disable
     spring.datasource.username=root
     qslv.aitid=12345
-    qslv.reservation-url=http://localhost:9091/reservation
-    qslv.cancel-reservation-url=http://localhost:9091/cancelReservation
+    qslv.reservation-url=http://qslv-transaction-rest-quick-silver.192.168.64.3.nip.io/Reservation
     qslv.rest-connect-timeout=500
     qslv.rest-connection-request-timeout=500
     qslv.rest-attempts=3

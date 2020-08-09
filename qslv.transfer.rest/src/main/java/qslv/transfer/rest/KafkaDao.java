@@ -1,9 +1,7 @@
 package qslv.transfer.rest;
 
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
@@ -65,14 +63,10 @@ public class KafkaDao {
 				// kafkaTemplate auto-flush is set to true. timeouts are in properties.
 				.get(config.getKafkaTimeout(), TimeUnit.MILLISECONDS).getProducerRecord();
 			log.debug("Kakfa Produce {}", record.value().getPayload());
-		} catch ( ExecutionException ex) {
-			log.debug(ex.getLocalizedMessage());
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Kafka Producer failure", ex);
-		} catch ( TimeoutException | InterruptedException  ex) {
+		} catch ( Exception ex) {
 			log.debug(ex.getLocalizedMessage());
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Kafka Producer failure", ex);
 		}
-		
 		// TODO: log time it took
 	}
 }

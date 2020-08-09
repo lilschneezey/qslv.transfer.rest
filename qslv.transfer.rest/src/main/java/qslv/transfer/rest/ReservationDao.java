@@ -22,9 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import qslv.common.TimedResponse;
 import qslv.common.TraceableRequest;
-import qslv.transaction.request.CancelReservationRequest;
 import qslv.transaction.request.ReservationRequest;
-import qslv.transaction.response.CancelReservationResponse;
 import qslv.transaction.response.ReservationResponse;
 
 @Repository
@@ -32,8 +30,6 @@ public class ReservationDao {
 	private static final Logger log = LoggerFactory.getLogger(ReservationDao.class);
 	private static ParameterizedTypeReference<TimedResponse<ReservationResponse>> reservationTypeReference = 
 			new ParameterizedTypeReference<TimedResponse<ReservationResponse>>() {};
-			private static ParameterizedTypeReference<TimedResponse<CancelReservationResponse>> cancelTypeReference = 
-					new ParameterizedTypeReference<TimedResponse<CancelReservationResponse>>() {};
 	@Autowired
 	private ConfigProperties config;
 	@Autowired
@@ -53,6 +49,7 @@ public class ReservationDao {
 		log.trace("recordTransaction ENTRY");
 
 		HttpHeaders headers = buildHeaders(callingHeaders);
+		headers.add(TraceableRequest.ACCEPT_VERSION, ReservationRequest.VERSION_1_0);
 		ResponseEntity<TimedResponse<ReservationResponse>> response = null;
 		try {
 			response = retryTemplate.execute(new RetryCallback<ResponseEntity<TimedResponse<ReservationResponse>>, ResourceAccessException>() {
@@ -74,30 +71,6 @@ public class ReservationDao {
 		log.trace("recordTransaction EXIT");
 		return response.getBody().getPayload();
 	}
-
-	public CancelReservationResponse cancelReservation(final Map<String, String> callingHeaders, final CancelReservationRequest request) {
-		log.debug("cancelReservation ENTRY");
-
-		HttpHeaders headers = buildHeaders(callingHeaders);
-		ResponseEntity<TimedResponse<CancelReservationResponse>> response = null;
-		try {
-			response = retryTemplate.execute(new RetryCallback<ResponseEntity<TimedResponse<CancelReservationResponse>>, ResourceAccessException>() {
-				public ResponseEntity<TimedResponse<CancelReservationResponse>> doWithRetry(RetryContext context) throws ResourceAccessException {
-					return restTemplateProxy.exchange(config.getCancelReservationUrl(), HttpMethod.POST, 
-							new HttpEntity<CancelReservationRequest>(request, headers), cancelTypeReference);
-				}});
-		} catch (ResourceAccessException ex ) {
-			String msg = String.format("HTTP POST to URL %s with %d retries failed.", config.getCancelReservationUrl(), config.getRestAttempts());
-			log.warn("cancelReservation EXIT {}", msg);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, msg, ex);
-		} catch (Exception ex) {
-			log.debug(ex.getLocalizedMessage());
-			throw (ex);
-		}
-		
-		log.trace("cancelReservation EXIT");
-		return response.getBody().getPayload();
-	}
 	
 	private HttpHeaders buildHeaders(final Map<String, String> callingHeaders) {
 		HttpHeaders headers = new HttpHeaders();
@@ -106,6 +79,7 @@ public class ReservationDao {
 		headers.add(TraceableRequest.AIT_ID, config.getAitid());
 		headers.add(TraceableRequest.BUSINESS_TAXONOMY_ID, callingHeaders.get(TraceableRequest.BUSINESS_TAXONOMY_ID));
 		headers.add(TraceableRequest.CORRELATION_ID, callingHeaders.get(TraceableRequest.CORRELATION_ID));
+		
 		return headers;
 	}
 

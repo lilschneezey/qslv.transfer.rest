@@ -17,6 +17,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.fasterxml.jackson.databind.JavaType;
+
 import qslv.common.kafka.JacksonAvroSerializer;
 import qslv.common.kafka.TraceableMessage;
 import qslv.transfer.request.TransferFulfillmentMessage;
@@ -51,7 +53,8 @@ public class KafkaProducerConfig {
 	public ProducerFactory<String, TraceableMessage<TransferFulfillmentMessage>> producerFactory() throws Exception {
 		Map<String,Object> kafkaprops = kafkaConfig();
 		JacksonAvroSerializer<TraceableMessage<TransferFulfillmentMessage>> jas = new JacksonAvroSerializer<>();
-		jas.configure(kafkaprops, false);
+		JavaType type = jas.getTypeFactory().constructParametricType(TraceableMessage.class, TransferFulfillmentMessage.class);
+		jas.configure(kafkaprops, false, type);
 		return new DefaultKafkaProducerFactory<String, TraceableMessage<TransferFulfillmentMessage>>(kafkaprops,
 				new StringSerializer(), jas);
 	}
