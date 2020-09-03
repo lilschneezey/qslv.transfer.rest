@@ -28,7 +28,7 @@ public class JdbcDao {
 
 	public final static String getAccount_sql = "SELECT account_no, lifecycle_status_cd FROM account WHERE account_no = ?; ";
 
-	@ExternalResourceSLI(value="jdbc::AccountDB", ait = "88888", remoteFailures= {DataAccessException.class})
+	@ExternalResourceSLI(value="jdbc::AccountDB", ait = "#{@configProperties.aitid}", remoteFailures= {DataAccessException.class})
 	public Account getAccount(final String accountNumber) {
 		log.debug("getAccount ENTRY {}", accountNumber);
 

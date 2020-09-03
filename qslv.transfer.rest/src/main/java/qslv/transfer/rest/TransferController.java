@@ -40,8 +40,8 @@ public class TransferController {
 	}
 	
 	@PostMapping("/TransferFunds")
-	@LogRequestTracingData(value="POST/TransferFunds", ait = "33333")
-	@ServiceElapsedTimeSLI(value="POST/TransferFunds", injectResponse = true, ait = "44444")
+	@LogRequestTracingData(value="POST/TransferFunds", ait = "#{@configProperties.aitid}")
+	@ServiceElapsedTimeSLI(value="POST/TransferFunds", injectResponse = true, ait = "#{@configProperties.aitid}")
 	public ResponseEntity<TimedResponse<TransferFundsResponse>> postTransferFunds(final @RequestHeader Map<String, String> headers,
 			final @RequestBody TransferFundsRequest request) {
 		
